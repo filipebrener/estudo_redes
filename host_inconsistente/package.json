@@ -1,0 +1,14 @@
+{
+  "name": "host_inconsistente",
+  "version": "1.0.0",
+  "description": "host_inconsistente",
+  "main": "client.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Filipe Brener",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
