@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -23,8 +24,8 @@ public class CircuitBreakerService {
 
     private final HttpClient client = HttpClient.newBuilder().build();
 
-    @Value("${host.and.port}")
-    private String host;
+    @Value("${host.url}")
+    private String url;
 
     @Value("${host.endpoint}")
     private String endpoint;
@@ -32,24 +33,32 @@ public class CircuitBreakerService {
     @Autowired
     private CircuitBreaker circuitBreaker;
 
-    private HttpResponse<String> sendRequest() throws IOException, InterruptedException {
+    @Autowired
+    private CircuitBreakerFactory circuitBreakerFactory;
+
+    private HttpResponse<String> sendRequest() {
         HttpRequest request = HttpRequest.newBuilder()
-                .GET().uri(URI.create(host + endpoint)).build();
+                .GET().uri(URI.create(url + endpoint)).build();
 
-        return client.send(request, HttpResponse.BodyHandlers.ofString());
+        try {
+            return client.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "sendRequest", fallbackMethod = "fallback")
-    public String frameworkCircuitBreaker() throws IOException, InterruptedException {
-        HttpResponse<String> response = sendRequest();
-        String result = "Resposta do servidor externo: " + response.body() + " --> Status code: " + response.statusCode();
-        LOG.info(result);
-        return result;
+    public CircuitBreakerDto frameworkCircuitBreaker() {
+        var cb = circuitBreakerFactory.create("circuitbreaker");
+        return cb.run(() -> {
+            HttpResponse<String> response = sendRequest();
+            String result = "Resposta do servidor externo: " + response.body() + " --> Status code: " + response.statusCode();
+            LOG.info(result);
+            return new CircuitBreakerDto(new CircuitBreaker(), response, false);
+        }, throwable -> fallback());
     }
 
-    private String fallback(Throwable throwable) {
-        LOG.error("fallback ativado");
-        return "fallback ativado!";
+    private CircuitBreakerDto fallback() {
+        return new CircuitBreakerDto(new CircuitBreaker(), null, true);
     }
 
     public CircuitBreakerDto implementedCircuitBreaker() {
@@ -65,7 +74,7 @@ public class CircuitBreakerService {
 
                 return new CircuitBreakerDto(circuitBreaker, response, false);
 
-            }catch(InterruptedException | IOException e) {
+            }catch(Exception e) {
                 circuitBreaker.addFailedRequest();
             }
         }

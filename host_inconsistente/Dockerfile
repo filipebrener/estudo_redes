@@ -1,4 +1,3 @@
-
 # Estágio de construção
 FROM node:20 AS builder
 

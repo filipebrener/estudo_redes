@@ -1,4 +1,4 @@
 #!/bin/bash
 
 mvn clean package -Dmaven.test.skip=true &&
-docker build -t host-inconsistente .
+docker build -t resilience-app .

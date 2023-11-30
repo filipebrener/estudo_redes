@@ -27,7 +27,7 @@ public class RetryService {
 
     private final HttpClient client = HttpClient.newBuilder().build();
 
-    @Value("${host.and.port}")
+    @Value("${host.url}")
     private String host;
 
     @Value("${host.endpoint}")

@@ -11,4 +11,5 @@ services:
       context: ./host_inconsistente
     ports:
       - 3000:3000
-
+    environment:
+      FAILURE_RATE: 0.2

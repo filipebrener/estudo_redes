@@ -18,13 +18,13 @@ public class CircuitBreaker {
 
     private int successRequestsCounter;
 
-    @Value("${implemented.circuitbreaker.openStateTime}")
+    @Value("${circuit.breaker.wait.duration.open.state}")
     private int openStateTime;
 
-    @Value("${implemented.circuitbreaker.maxFailureToOpen}")
+    @Value("${circuit.breaker.min.of.calls}")
     private int maxFailureToOpen;
 
-    @Value("${implemented.circuitbreaker.minSuccessToClose}")
+    @Value("${circuit.breaker.min.of.calls}")
     private int minSuccessToClose;
 
     private static Instant blockedUntil;

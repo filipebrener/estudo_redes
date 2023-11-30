@@ -17,7 +17,7 @@ public class CircuitBreakerController {
     private CircuitBreakerService circuitBreaker;
 
     @GetMapping("/framework")
-    public String frameworkCircuitBreaker() throws IOException, InterruptedException {
+    public CircuitBreakerDto frameworkCircuitBreaker() throws IOException, InterruptedException {
         return circuitBreaker.frameworkCircuitBreaker();
     }
 
