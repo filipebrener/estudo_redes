@@ -9,8 +9,8 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>SIN352.filipe.brener</groupId>
-	<artifactId>ResilienceApp</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<artifactId>resilienceApp</artifactId>
+	<version>1.0.0</version>
 	<name>Cliente com padrão de resiliência Retry e Circuit Breaker</name>
 	<description>Implementação do padrão Retry</description>
 	<properties>
@@ -70,6 +70,7 @@
 	</dependencyManagement>
 
 	<build>
+		<finalName>resilience-app</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

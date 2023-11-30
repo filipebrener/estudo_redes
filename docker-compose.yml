@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  resilience-app:
+    build:
+      context: ./resilienceApp
+    ports:
+      - 8080:8080
+  host-inconsistente:
+    build:
+      context: ./host_inconsistente
+    ports:
+      - 3000:3000
+

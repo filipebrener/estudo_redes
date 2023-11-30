@@ -11,3 +11,9 @@ app.get('/healthCheck', (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor está rodando em http://localhost:${port}`);
 });
+
+var process = require('process')
+process.on('SIGINT', () => {
+  console.info("Interrupted")
+  process.exit(0)
+})
