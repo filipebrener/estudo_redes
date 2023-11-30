@@ -1,6 +1,6 @@
 package SIN352.filipe.brener.resilience.dto;
 
-import SIN352.filipe.brener.resilience.services.CircuitBreakerService;
+import SIN352.filipe.brener.resilience.domain.CircuitBreaker;
 
 import java.net.http.HttpResponse;
 
@@ -20,11 +20,11 @@ public class CircuitBreakerDto {
 
     private boolean isFallback;
 
-    public CircuitBreakerDto(CircuitBreakerService circuitBreaker, HttpResponse<String> response, boolean isFallback) {
+    public CircuitBreakerDto(CircuitBreaker circuitBreaker, HttpResponse<String> response, boolean isFallback) {
         this.state = circuitBreaker.getState().name();
-        this.successRate = String.format("%s/%s", CircuitBreakerService.getSuccessRequestsCounter(), circuitBreaker.getMinSuccessToClose());
-        this.failRate = String.format("%s/%s", CircuitBreakerService.getFailedRequestsCounter(), circuitBreaker.getMaxFailureToOpen());
-        this.timeToUnblock = CircuitBreakerService.timeToUnblock();
+        this.successRate = String.format("%s/%s", circuitBreaker.getSuccessRequestsCounter(), circuitBreaker.getMinSuccessToClose());
+        this.failRate = String.format("%s/%s", circuitBreaker.getFailedRequestsCounter(), circuitBreaker.getMaxFailureToOpen());
+        this.timeToUnblock = CircuitBreaker.timeToUnblock();
         if(response != null){
             this.serverStatusCode = response.statusCode();
             this.serverResponseBody = response.body();

@@ -1,106 +1,79 @@
 package SIN352.filipe.brener.resilience.services;
 
-import SIN352.filipe.brener.resilience.enums.Estado;
+import SIN352.filipe.brener.resilience.domain.CircuitBreaker;
+import SIN352.filipe.brener.resilience.dto.CircuitBreakerDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
-import static SIN352.filipe.brener.resilience.enums.Estado.*;
+import static SIN352.filipe.brener.resilience.enums.Estado.OPEN;
 
 @Service
 public class CircuitBreakerService {
 
-    private static Estado estado = CLOSED;
+    private static final Logger LOG = LoggerFactory.getLogger(CircuitBreakerService.class);
 
-    private static int failedRequestsCounter;
+    private final HttpClient client = HttpClient.newBuilder().build();
 
-    private static int successRequestsCounter;
+    @Value("${host.and.port}")
+    private String host;
 
-    @Value("${implemented.circuitbreaker.openStateTime}")
-    private int openStateTime;
+    @Value("${host.endpoint}")
+    private String endpoint;
 
-    @Value("${implemented.circuitbreaker.maxFailureToOpen}")
-    private int maxFailureToOpen;
+    @Autowired
+    private CircuitBreaker circuitBreaker;
 
-    @Value("${implemented.circuitbreaker.minSuccessToClose}")
-    private int minSuccessToClose;
+    private HttpResponse<String> sendRequest() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .GET().uri(URI.create(host + endpoint)).build();
 
-    private static Instant blockedUntil;
+        return client.send(request, HttpResponse.BodyHandlers.ofString());
+    }
 
-    public Estado getState(){
-        if(!isBlocked() && estado == OPEN){
-            halfOpenState();
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "sendRequest", fallbackMethod = "fallback")
+    public String frameworkCircuitBreaker() throws IOException, InterruptedException {
+        HttpResponse<String> response = sendRequest();
+        String result = "Resposta do servidor externo: " + response.body() + " --> Status code: " + response.statusCode();
+        LOG.info(result);
+        return result;
+    }
+
+    private String fallback(Throwable throwable) {
+        LOG.error("fallback ativado");
+        return "fallback ativado!";
+    }
+
+    public CircuitBreakerDto implementedCircuitBreaker() {
+        if(!(circuitBreaker.getState() == OPEN)){
+            try {
+                HttpResponse<String> response = sendRequest();
+
+                if (response.statusCode() == 200) {
+                    circuitBreaker.addSuccessRequest();
+                } else {
+                    circuitBreaker.addFailedRequest();
+                }
+
+                return new CircuitBreakerDto(circuitBreaker, response, false);
+
+            }catch(InterruptedException | IOException e) {
+                circuitBreaker.addFailedRequest();
+            }
         }
-        return estado;
+        return implementedFallback();
     }
 
-    public void closeState(){
-        estado = CLOSED;
-        failedRequestsCounter = 0;
+    private CircuitBreakerDto implementedFallback(){
+        return new CircuitBreakerDto(circuitBreaker, null, true);
     }
-
-    public void openState(){
-        estado = OPEN;
-        successRequestsCounter = 0;
-    }
-
-    public void halfOpenState(){
-        estado = HALF_OPEN;
-    }
-
-    public void addFailedRequest(){
-        failedRequestsCounter++;
-        if(failedRequestsCounter >= maxFailureToOpen){
-            blockedUntil = Instant.now().plusMillis(openStateTime);
-            openState();
-        }
-    }
-
-    public void addSuccessRequest(){
-        successRequestsCounter++;
-        if(estado == OPEN){
-            halfOpenState();
-        } else if(estado == CLOSED){
-            failedRequestsCounter = 0;
-        } else if(successRequestsCounter > minSuccessToClose){
-            closeState();
-        }
-    }
-
-    public boolean isBlocked(){
-        if(blockedUntil != null && blockedUntil.isBefore(Instant.now())){
-            blockedUntil = null;
-        }
-        return blockedUntil != null;
-    }
-
-    public String getInfo(){
-        return String.format("state: %s\nsuccess: %s/%s\nfailed: %s/%s\ntime to unblock: %s", estado,
-                successRequestsCounter, minSuccessToClose, failedRequestsCounter, maxFailureToOpen,
-                blockedUntil != null ? Duration.between(Instant.now(), blockedUntil).toMillis() : "not blocked");
-    }
-
-    public static String getFailedRequestsCounter() {
-        return String.valueOf(failedRequestsCounter);
-    }
-
-    public static String getSuccessRequestsCounter() {
-        return String.valueOf(successRequestsCounter);
-    }
-
-    public String getMaxFailureToOpen() {
-        return String.valueOf(maxFailureToOpen);
-    }
-
-    public String getMinSuccessToClose() {
-        return String.valueOf(minSuccessToClose);
-    }
-
-    public static String timeToUnblock() {
-        return blockedUntil != null ? String.valueOf(Duration.between(Instant.now(), blockedUntil).toMillis()) : "not blocked";
-    }
-
 
 }
