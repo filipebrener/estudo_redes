@@ -1,25 +1,24 @@
-require('dotenv').config();
-
 const express = require('express');
 const app = express();
 const port = 3000;
 
-// Obtem a taxa de falha da variável de ambiente ou define um valor padrão de 0.1 (10% de taxa de falha)
-const failureRate = parseFloat(process.env.FAILURE_RATE) || 0.0;
-
 // Rota simples que retorna a string "Estou funcionando"
 app.get('/request', (req, res) => {
+  // Obtém a taxa de falha dos query parameters, se presente
+  const queryFailureRate = parseFloat(req.query.failureRate);
+
+  // Usa a taxa de falha dos query parameters se presente, senão, utiliza da variável de ambiente ou o valor padrão
+  const failureRate = !isNaN(queryFailureRate) ? queryFailureRate : parseFloat(process.env.FAILURE_RATE) || 0.1;
+
   // Simula a falha com base na taxa de falha configurada
-  if (Math.random() < failureRate) {
-    res.status(500).send('Erro interno do servidor');
-  } else {
-    res.send('Estou funcionando');
-  }
+  const requestFail = Math.random() < failureRate;
+  const statusCode = ( requestFail ? 500 : 200);
+  res.status(statusCode).send(`Request status: ${requestFail ? "failed" : "successed"}! Current fail rate: ${failureRate}`);
 });
 
 // Inicia o servidor na porta especificada
 app.listen(port, () => {
-  console.log(`Server is running in http://localhost:${port}! failureRate: ${failureRate}`);
+  console.log(`Server is running in http://localhost:${port}!`);
 });
 
 // Trata o sinal SIGINT (Ctrl+C) para encerrar o servidor de forma adequada
